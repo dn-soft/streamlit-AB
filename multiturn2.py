@@ -66,7 +66,6 @@ if st.button("전송"):
         }
 
         payload = {
-            "model": model,
             "messages": [
                 {"role": "system", "content": st.session_state.system_prompt},
                 *st.session_state.messages
@@ -118,7 +117,6 @@ if st.button("대화 내용 다운로드"):
     chat_data = {
         "system_prompt": st.session_state.system_prompt,
         "messages": st.session_state.messages,
-        "model": model,
         "temperature": temperature,
         "max_tokens": max_tokens,
         "top_p": top_p
