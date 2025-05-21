@@ -24,12 +24,6 @@ if new_system_prompt != st.session_state.system_prompt:
     st.session_state.system_prompt = new_system_prompt
     st.session_state.messages = []  # 시스템 프롬프트가 변경되면 대화 기록 초기화
 
-# 모델 선택
-# model = st.sidebar.selectbox(
-#     "AI 모델을 선택하세요:",
-#     ("gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo")
-# )
-
 # 추가 매개변수 설정
 temperature = st.sidebar.slider("Temperature:", min_value=0.0, max_value=1.0, value=0.7, step=0.1)
 max_tokens = st.sidebar.number_input("최대 토큰 수:", min_value=1, max_value=4096, value=256, step=1)
@@ -61,7 +55,7 @@ if st.button("전송"):
         st.session_state.messages.append({"role": "user", "content": user_input})
 
         headers = {
-            "Authorization": f"Bearer {api_key}",
+            "Authorization": api_key,
             "Content-Type": "application/json"
         }
 
@@ -73,7 +67,6 @@ if st.button("전송"):
             "temperature": temperature,
             "max_tokens": max_tokens,
             "top_p": top_p,
-            "response_format": "json"  # JSON 응답 형식 지정
         }
 
         try:
