@@ -55,7 +55,7 @@ if st.button("전송"):
         st.session_state.messages.append({"role": "user", "content": user_input})
 
         headers = {
-            "Authorization": api_key,
+            "api-key": api_key,
             "Content-Type": "application/json"
         }
 
@@ -66,7 +66,9 @@ if st.button("전송"):
             ],
             "temperature": temperature,
             "max_tokens": max_tokens,
-            "top_p": top_p,
+            "frequency_penalty": 0,
+            "presence_penalty": 0,
+            "stop": None
         }
 
         try:
