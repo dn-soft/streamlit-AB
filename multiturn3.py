@@ -67,6 +67,7 @@ if st.button("전송"):
             temperature=temperature,
             max_tokens=max_tokens,
             top_p=top_p,
+            model=""
         )
         
         # AI 응답을 파싱
