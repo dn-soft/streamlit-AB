@@ -73,23 +73,23 @@ if st.button("전송"):
         # AI 응답을 파싱
         try:
             ai_response = response.choices[0].message.content
-            structured_response = json.loads(ai_response)
+            # structured_response = json.loads(ai_response)
             
             # 응답 구조 검증
-            validated_response = ChatResponse(
-                total_round=structured_response.get('total_round', 1),
-                answer_count=structured_response.get('answer_count', 0),
-                current_answer=structured_response.get('current_answer', ''),
-                hint=structured_response.get('hint', []),
-                check_answer=structured_response.get('check_answer', False),
-                is_end=structured_response.get('is_end', False),
-                message=structured_response.get('message', '')
-            )
+            # validated_response = ChatResponse(
+            #     total_round=structured_response.get('total_round', 1),
+            #     answer_count=structured_response.get('answer_count', 0),
+            #     current_answer=structured_response.get('current_answer', ''),
+            #     hint=structured_response.get('hint', []),
+            #     check_answer=structured_response.get('check_answer', False),
+            #     is_end=structured_response.get('is_end', False),
+            #     message=structured_response.get('message', '')
+            # )
             
             # 대화 기록에 추가
             st.session_state.messages.append({
                 "role": "assistant", 
-                "content": json.dumps(validated_response, ensure_ascii=False, indent=2)
+                "content": ai_response
             })
             
         except json.JSONDecodeError:
