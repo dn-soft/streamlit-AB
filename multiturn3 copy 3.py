@@ -35,8 +35,6 @@ if "system_prompt" not in st.session_state:
     st.session_state.system_prompt = "당신은 도움이 되는 AI 어시스턴트입니다."
 if "is_processing" not in st.session_state:
     st.session_state.is_processing = False
-if "api_logs" not in st.session_state:
-    st.session_state.api_logs = []
 
 # ──────────────────────────────────────────────────────────────
 # 사이드바 — 설정 & 액션
@@ -69,10 +67,7 @@ with st.sidebar:
 
     if st.button("🗑️ 대화 기록 초기화", use_container_width=True):
         st.session_state.messages = []
-        st.session_state.api_logs = []
         st.rerun()
-
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     if st.session_state.messages:
         chat_data = {
@@ -80,29 +75,18 @@ with st.sidebar:
             "messages": st.session_state.messages,
             "max_tokens": max_tokens,
         }
+        json_string = json.dumps(chat_data, ensure_ascii=False, indent=2)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         st.download_button(
             label="💾 대화 내용 다운로드",
-            data=json.dumps(chat_data, ensure_ascii=False, indent=2),
+            data=json_string,
             file_name=f"chat_history_{timestamp}.json",
             mime="application/json",
             use_container_width=True,
         )
 
-    if st.session_state.api_logs:
-        st.download_button(
-            label="🔍 API 요청/응답 다운로드",
-            data=json.dumps(st.session_state.api_logs, ensure_ascii=False, indent=2),
-            file_name=f"api_logs_{timestamp}.json",
-            mime="application/json",
-            use_container_width=True,
-            help="실제 Azure OpenAI에 보낸 요청 페이로드와 받은 응답 전체(토큰 사용량 등 포함)",
-        )
-
     st.divider()
-    st.caption(
-        f"💡 메시지 {len(st.session_state.messages)}개 · "
-        f"API 호출 {len(st.session_state.api_logs)}회"
-    )
+    st.caption(f"💡 메시지 {len(st.session_state.messages)}개")
 
 # ──────────────────────────────────────────────────────────────
 # 메인 — 채팅 영역
@@ -120,24 +104,6 @@ if st.session_state.is_processing:
     with st.chat_message("assistant"):
         st.markdown("_생각하는 중..._ ⏳")
 
-# 최근 API 호출 미리보기 (전체 다운로드는 사이드바에서)
-if st.session_state.api_logs and not st.session_state.is_processing:
-    last_log = st.session_state.api_logs[-1]
-    usage = last_log.get("response", {}).get("usage") or {}
-    summary_bits = [f"{last_log.get('latency_ms', '?')}ms"]
-    if usage:
-        summary_bits.append(
-            f"prompt {usage.get('prompt_tokens', '?')} / "
-            f"completion {usage.get('completion_tokens', '?')} / "
-            f"total {usage.get('total_tokens', '?')} tokens"
-        )
-    with st.expander(f"🔍 최근 API 호출 — {' · '.join(summary_bits)}", expanded=False):
-        tab_req, tab_res = st.tabs(["요청", "응답"])
-        with tab_req:
-            st.json(last_log.get("request"), expanded=False)
-        with tab_res:
-            st.json(last_log.get("response") or {"error": last_log.get("error")}, expanded=False)
-
 # 채팅 입력 (Enter 제출, 하단 고정, 처리 중에는 비활성화)
 user_input = st.chat_input(
     "메시지를 입력하세요...",
@@ -153,40 +119,21 @@ if user_input and not st.session_state.is_processing:
 # 2차 rerun: 비활성화 상태 렌더 후 실제 API 호출
 # GPT-5/o1/o3 계열은 max_completion_tokens 사용, temperature/top_p는 기본값(1)만 허용
 if st.session_state.is_processing:
-    request_payload = {
-        "model": azure_deployment,
-        "messages": [
-            {"role": "system", "content": st.session_state.system_prompt},
-            *st.session_state.messages,
-        ],
-        "max_completion_tokens": max_tokens,
-    }
-    started_at = datetime.now()
     try:
-        response = client.chat.completions.create(**request_payload)
-        ended_at = datetime.now()
+        response = client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": st.session_state.system_prompt},
+                *st.session_state.messages,
+            ],
+            max_completion_tokens=max_tokens,
+            model=azure_deployment,
+        )
         ai_response = response.choices[0].message.content
         st.session_state.messages.append({
             "role": "assistant",
             "content": ai_response,
         })
-        # API 요청/응답 전문 기록 (토큰 사용량 포함)
-        st.session_state.api_logs.append({
-            "timestamp": started_at.isoformat(),
-            "latency_ms": int((ended_at - started_at).total_seconds() * 1000),
-            "endpoint": azure_endpoint,
-            "api_version": azure_api_version,
-            "request": request_payload,
-            "response": response.model_dump(),
-        })
     except Exception as e:
-        st.session_state.api_logs.append({
-            "timestamp": started_at.isoformat(),
-            "endpoint": azure_endpoint,
-            "api_version": azure_api_version,
-            "request": request_payload,
-            "error": str(e),
-        })
         st.error(f"오류가 발생했습니다: {e}")
     finally:
         st.session_state.is_processing = False
