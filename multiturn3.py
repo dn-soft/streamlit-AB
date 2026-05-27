@@ -23,7 +23,7 @@ if "messages" not in st.session_state:
 if "system_prompt" not in st.session_state:
     st.session_state.system_prompt = "당신은 도움이 되는 AI 어시스턴트입니다."
 
-st.title("멀티턴 AI 채팅 테스트")
+st.title("멀티턴 AI 채팅 테스트 (GPT 5.4)")
 
 # 사이드바에 설정 추가
 st.sidebar.title("설정")
