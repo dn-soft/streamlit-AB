@@ -1,21 +1,16 @@
 import streamlit as st
-from openai import AzureOpenAI
+from openai import OpenAI
 import os
 import json
 from datetime import datetime
 from typing import TypedDict, List
 
-# Azure OpenAI 클라이언트 초기화
-azure_endpoint = st.secrets["AZURE_OPENAI_ENDPOINT"]
-azure_api_key = st.secrets["AZURE_OPENAI_API_KEY"]
-azure_api_version = st.secrets.get("AZURE_OPENAI_API_VERSION", "2025-01-01-preview")
-azure_deployment = st.secrets["AZURE_OPENAI_DEPLOYMENT"]
-
-client = AzureOpenAI(
-    azure_endpoint=azure_endpoint,
-    api_key=azure_api_key,
-    api_version=azure_api_version,
-) if azure_api_key else None
+# OpenAI API 키 설정
+# client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+# OpenAI 클라이언트 초기화
+api_key = st.secrets["OPENAI_API_KEY"]
+api_url = st.secrets["OPENAI_API_BASE"]
+client = OpenAI(api_key=api_key, base_url=api_url, default_headers={"api-key": api_key}, default_query={"api-version": "2025-01-01-preview"}) if api_key else None
 
 # 세션 상태 초기화
 if "messages" not in st.session_state:
@@ -63,7 +58,7 @@ if st.button("전송"):
         # 사용자 메시지를 대화 기록에 추가
         st.session_state.messages.append({"role": "user", "content": user_input})
         
-        # AI 응답 생성 (Azure는 model 자리에 deployment 이름을 사용)
+        # AI 응답 생성
         response = client.chat.completions.create(
             messages=[
                 {"role": "system", "content": st.session_state.system_prompt},
@@ -72,7 +67,7 @@ if st.button("전송"):
             temperature=temperature,
             max_tokens=max_tokens,
             top_p=top_p,
-            model=azure_deployment
+            model=""
         )
         
         # AI 응답을 파싱
