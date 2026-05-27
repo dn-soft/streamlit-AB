@@ -44,9 +44,6 @@ for idx, message in enumerate(st.session_state.messages):
     else:
         st.text_area("AI:", value=message["content"], height=100, disabled=True, key=f"ai_{idx}")
 
-# 채팅 입력 부분을 대화 기록 초기화 버튼 바로 위로 이동
-user_input = st.text_input("메시지를 입력하세요:", key="user_input")
-
 # 응답 구조체 정의
 class ChatResponse(TypedDict):
     total_round: int
@@ -57,8 +54,12 @@ class ChatResponse(TypedDict):
     is_end: bool
     message: str
 
-# 메시지 전송 버튼
-if st.button("전송"):
+# 채팅 입력 폼 (Enter 키로 제출 가능, 제출 후 입력창 자동 초기화)
+with st.form("chat_form", clear_on_submit=True):
+    user_input = st.text_input("메시지를 입력하세요:")
+    submitted = st.form_submit_button("전송")
+
+if submitted:
     if user_input:
         # 사용자 메시지를 대화 기록에 추가
         st.session_state.messages.append({"role": "user", "content": user_input})
