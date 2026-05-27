@@ -64,14 +64,13 @@ if st.button("전송"):
         st.session_state.messages.append({"role": "user", "content": user_input})
         
         # AI 응답 생성 (Azure는 model 자리에 deployment 이름을 사용)
+        # GPT-5/o1/o3 계열은 max_completion_tokens를 쓰고 temperature/top_p는 기본값(1)만 허용
         response = client.chat.completions.create(
             messages=[
                 {"role": "system", "content": st.session_state.system_prompt},
                 *st.session_state.messages
             ],
-            temperature=temperature,
-            max_tokens=max_tokens,
-            top_p=top_p,
+            max_completion_tokens=max_tokens,
             model=azure_deployment
         )
         
