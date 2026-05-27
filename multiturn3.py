@@ -59,13 +59,13 @@ with st.form("chat_form", clear_on_submit=True):
     user_input = st.text_input("메시지를 입력하세요:")
     submitted = st.form_submit_button("전송")
 
-if submitted:
-    if user_input:
-        # 사용자 메시지를 대화 기록에 추가
-        st.session_state.messages.append({"role": "user", "content": user_input})
-        
-        # AI 응답 생성 (Azure는 model 자리에 deployment 이름을 사용)
-        # GPT-5/o1/o3 계열은 max_completion_tokens를 쓰고 temperature/top_p는 기본값(1)만 허용
+if submitted and user_input:
+    # 사용자 메시지를 대화 기록에 추가
+    st.session_state.messages.append({"role": "user", "content": user_input})
+
+    # AI 응답 생성 (Azure는 model 자리에 deployment 이름을 사용)
+    # GPT-5/o1/o3 계열은 max_completion_tokens를 쓰고 temperature/top_p는 기본값(1)만 허용
+    with st.spinner("AI 응답 생성 중..."):
         response = client.chat.completions.create(
             messages=[
                 {"role": "system", "content": st.session_state.system_prompt},
@@ -74,36 +74,22 @@ if submitted:
             max_completion_tokens=max_tokens,
             model=azure_deployment
         )
-        
-        # AI 응답을 파싱
-        try:
-            ai_response = response.choices[0].message.content
-            # structured_response = json.loads(ai_response)
-            
-            # 응답 구조 검증
-            # validated_response = ChatResponse(
-            #     total_round=structured_response.get('total_round', 1),
-            #     answer_count=structured_response.get('answer_count', 0),
-            #     current_answer=structured_response.get('current_answer', ''),
-            #     hint=structured_response.get('hint', []),
-            #     check_answer=structured_response.get('check_answer', False),
-            #     is_end=structured_response.get('is_end', False),
-            #     message=structured_response.get('message', '')
-            # )
-            
-            # 대화 기록에 추가
-            st.session_state.messages.append({
-                "role": "assistant", 
-                "content": ai_response
-            })
-            
-        except json.JSONDecodeError:
-            st.error("AI 응답을 JSON으로 파싱할 수 없습니다.")
-        except Exception as e:
-            st.error(f"오류가 발생했습니다: {str(e)}")
-        
-        # 페이지 새로고침
-        st.rerun()
+
+    # AI 응답을 파싱
+    try:
+        ai_response = response.choices[0].message.content
+        # 대화 기록에 추가
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": ai_response
+        })
+    except json.JSONDecodeError:
+        st.error("AI 응답을 JSON으로 파싱할 수 없습니다.")
+    except Exception as e:
+        st.error(f"오류가 발생했습니다: {str(e)}")
+
+    # 페이지 새로고침
+    st.rerun()
 
 # 대화 기록 초기화 버튼
 if st.button("대화 기록 초기화"):
