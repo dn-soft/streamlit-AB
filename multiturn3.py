@@ -22,6 +22,8 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 if "system_prompt" not in st.session_state:
     st.session_state.system_prompt = "당신은 도움이 되는 AI 어시스턴트입니다."
+if "is_processing" not in st.session_state:
+    st.session_state.is_processing = False
 
 st.title("멀티턴 AI 채팅 테스트 (GPT 5.4)")
 
@@ -55,41 +57,40 @@ class ChatResponse(TypedDict):
     message: str
 
 # 채팅 입력 폼 (Enter 키로 제출 가능, 제출 후 입력창 자동 초기화)
+# 응답 대기 중에는 입력/버튼을 비활성화하여 중복 전송을 방지
 with st.form("chat_form", clear_on_submit=True):
-    user_input = st.text_input("메시지를 입력하세요:")
-    submitted = st.form_submit_button("전송")
+    user_input = st.text_input("메시지를 입력하세요:", disabled=st.session_state.is_processing)
+    submitted = st.form_submit_button("전송", disabled=st.session_state.is_processing)
 
-if submitted and user_input:
-    # 사용자 메시지를 대화 기록에 추가
+# 1차: 사용자 메시지 등록 + 처리중 플래그 ON, 즉시 rerun → 비활성화된 폼이 화면에 표시됨
+if submitted and user_input and not st.session_state.is_processing:
     st.session_state.messages.append({"role": "user", "content": user_input})
+    st.session_state.is_processing = True
+    st.rerun()
 
-    # AI 응답 생성 (Azure는 model 자리에 deployment 이름을 사용)
+# 2차: 비활성화 상태 렌더 이후 실제 API 호출
+if st.session_state.is_processing:
     # GPT-5/o1/o3 계열은 max_completion_tokens를 쓰고 temperature/top_p는 기본값(1)만 허용
-    with st.spinner("AI 응답 생성 중..."):
-        response = client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": st.session_state.system_prompt},
-                *st.session_state.messages
-            ],
-            max_completion_tokens=max_tokens,
-            model=azure_deployment
-        )
-
-    # AI 응답을 파싱
     try:
+        with st.spinner("AI 응답 생성 중..."):
+            response = client.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": st.session_state.system_prompt},
+                    *st.session_state.messages
+                ],
+                max_completion_tokens=max_tokens,
+                model=azure_deployment
+            )
         ai_response = response.choices[0].message.content
-        # 대화 기록에 추가
         st.session_state.messages.append({
             "role": "assistant",
             "content": ai_response
         })
-    except json.JSONDecodeError:
-        st.error("AI 응답을 JSON으로 파싱할 수 없습니다.")
     except Exception as e:
         st.error(f"오류가 발생했습니다: {str(e)}")
-
-    # 페이지 새로고침
-    st.rerun()
+    finally:
+        st.session_state.is_processing = False
+        st.rerun()
 
 # 대화 기록 초기화 버튼
 if st.button("대화 기록 초기화"):
